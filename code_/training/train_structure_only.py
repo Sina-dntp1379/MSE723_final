@@ -21,6 +21,20 @@ w_data = pd.read_pickle(training_df_dir)
 TEST=False
 
 
+# def train_regressor(
+#     dataset: pd.DataFrame,
+#     structural_features: Optional[list[str]],
+#     numerical_feats: Optional[list[str]],
+#     unroll: Union[dict[str, str], list[dict[str, str]], None],
+#     regressor_type: str,
+#     target_features: str,
+#     transform_type: str,
+#     generalizability:bool,
+#     feat_importance:bool,
+#     hyperparameter_optimization: bool=True,
+#     Test:bool=False,
+#     ) -> None:
+
 def main_ECFP_only(
     dataset: pd.DataFrame,
     regressor_type: str,
@@ -28,6 +42,7 @@ def main_ECFP_only(
     transform_type: str,
     hyperparameter_optimization: bool,
     radius: int,
+    generalizability:bool,
 ) -> None:
     representation: str = "ECFP"
     n_bits = radius_to_bits[radius]
@@ -42,7 +57,6 @@ def main_ECFP_only(
     }
     scores, predictions, data_shapes = train_regressor(
                                         dataset=dataset,
-                                        representation=representation,
                                         structural_features=structural_features,
                                         unroll=unroll_single_feat,
                                         numerical_feats=None,
@@ -50,6 +64,8 @@ def main_ECFP_only(
                                         regressor_type=regressor_type,
                                         transform_type=transform_type,
                                         hyperparameter_optimization=hyperparameter_optimization,
+                                        feat_importance=None,
+                                        generalizability=generalizability,
                                         Test=TEST
                                     )
     save_result(scores,
@@ -71,6 +87,8 @@ def main_Mordred_only(
     target_features: list[str],
     transform_type: str,
     hyperparameter_optimization: bool,
+    generalizability:bool,
+
 ) -> None:
     representation: str = "Mordred"
     structural_features: list[str] = [f"poly_smile_{representation}"]
@@ -79,9 +97,6 @@ def main_Mordred_only(
 
     scores, predictions, data_shapes  = train_regressor(
                                     dataset=dataset,
-                                    features_impute=None,
-                                    special_impute=None,
-                                    representation=representation,
                                     structural_features=structural_features,
                                     unroll=unroll_single_feat,
                                     numerical_feats=None,
@@ -89,6 +104,8 @@ def main_Mordred_only(
                                     regressor_type=regressor_type,
                                     transform_type=transform_type,
                                     hyperparameter_optimization=hyperparameter_optimization,
+                                    feat_importance=None,
+                                    generalizability=generalizability,
                                     Test=TEST
                                 )
 
@@ -113,24 +130,23 @@ def main_Mordred_only(
 # radii = [3, 4, 5, 6]
 # vectors = ['count', 'binary']
 def perform_model_ecfp(regressor_type:str,
-                        radius:int,
-                        target:str):
+                        ):
                 
                 main_ECFP_only(
                                 dataset=w_data,
                                 regressor_type= regressor_type,
-                                target_features= [target],
+                                target_features= ["ofet.hole_mobility"],
                                 hyperparameter_optimization= True,
-                                radius = radius,
+                                radius = 6,
                                 )
 
 
-def perform_model_mordred(regressor_type:str,target:str):
+def perform_model_mordred(regressor_type:str):
  
                 main_Mordred_only(
                                 dataset=w_data,
                                 regressor_type= regressor_type,
-                                target_features= [target],
+                                target_features= ["ofet.hole_mobility"],
                                 hyperparameter_optimization= True,
                                 )
 
@@ -139,7 +155,7 @@ def perform_model_mordred(regressor_type:str,target:str):
 
 # perform_model_ecfp('GPR',6,"count",'Rg1 (nm)', 'Monomer',kernel='tanimoto')
 # perform_model_maccs()
-# perform_model_mordred('RF','Rg1 (nm)', 'Monomer')
+# perform_model_mordred('RF')
 
 # def main():
 #     parser = ArgumentParser(description='Run models with specific parameters')
