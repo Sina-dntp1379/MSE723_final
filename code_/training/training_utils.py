@@ -1,26 +1,25 @@
-
 from pathlib import Path
 from typing import Callable, Optional, Union, Dict, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, str
 from sklearn.pipeline import Pipeline
 from skopt import BayesSearchCV
+from sklearn.preprocessing import FunctionTransformer
 
-from save_results import remove_unserializable_keys
-from all_factories import (regressor_factory,
-                           regressor_search_space,
-                           transformers,
-                           )
+
+from save_results import remove_unserializable_keys, save_result
+from filter_data import filter_dataset, get_scale
+from all_factories import (
+                            regressor_factory,
+                            regressor_search_space,
+                            transforms)
+
+
 
 from process_scoring import (process_results)
-
-from filter_data import (unroll_features,
-                         get_data,
-                         get_scale)
-
 from split import (
     cross_validate_regressor,
     get_incremental_split,
@@ -28,10 +27,7 @@ from split import (
     get_generalizability_score
 )
 
-
-
 HERE: Path = Path(__file__).resolve().parent
-
 
 
 def set_globals(Test: bool=False) -> None:
@@ -46,104 +42,138 @@ def set_globals(Test: bool=False) -> None:
         BO_ITER = 1
 
 
+
 def train_regressor(
     dataset: pd.DataFrame,
+    features_impute: Optional[list[str]],
+    special_impute: Optional[str],
+    representation: Optional[str],
+    structural_features: Optional[list[str]],
+    numerical_feats: Optional[list[str]],
+    unroll: Union[dict[str, str], list[dict[str, str]], None],
     regressor_type: str,
-    features:list,
-    target: str,
+    target_features: str,
     transform_type: str,
-    generalizability,
-    feat_importance,
     hyperparameter_optimization: bool=True,
-    single_features: Optional[bool]=False,
+    imputer: Optional[str] = None,
+    cutoff:Dict[str, Tuple[Optional[float], Optional[float]]]=None,
+    kernel: Optional[str] = None,
     Test:bool=False,
     ) -> None:
-        
+        """
+        you should change the name here for prepare
+        """
+            #seed scores and seed prediction
         set_globals(Test)
-        scores, predictions, data_shape,feature_importance = _prepare_data(
+        scores, predictions, data_shape = _prepare_data(
                                                     dataset=dataset,
+                                                    features_impute= features_impute,
+                                                    special_impute= special_impute,
+                                                    representation=representation,
+                                                    structural_features=structural_features,
+                                                    unroll=unroll,
+                                                    numerical_feats = numerical_feats,
+                                                    target_features=target_features,
                                                     regressor_type=regressor_type,
-                                                    features=features,
-                                                    single_features=single_features,
-                                                    target=target,
                                                     transform_type=transform_type,
+                                                    imputer=imputer,
+                                                    cutoff=cutoff,
                                                     hyperparameter_optimization=hyperparameter_optimization,
-                                                    generalizability=generalizability,
-                                                    feat_importance=feat_importance,
+                                                    kernel=kernel
                                                     )
-    
-        scores = process_results(scores, data_shape, generalizability)
+        scores = process_scores(scores)
   
-        return scores, predictions, feature_importance
+        return scores, predictions, data_shape
         
 
 
 
 def _prepare_data(
     dataset: pd.DataFrame,
-    features:list,
-    target: str,
+    target_features: str,
     regressor_type: str,
-    transform_type: str,
-    hyperparameter_optimization: bool,
-    generalizability,
-    feat_importance,
-    single_features:Optional[bool]=False,
+    features_impute: Optional[list[str]]=None,
+    special_impute: Optional[str]=None,
+    representation: Optional[str]=None,
+    structural_features: Optional[list[str]]=None,
+    numerical_feats: Optional[list[str]]=None,
+    unroll: Union[dict, list, None] = None,
+    transform_type: str = "Standard",
+    hyperparameter_optimization: bool = True,
+    imputer: Optional[str] = None,
+    cutoff: Dict[str, Tuple[Optional[float], Optional[float]]]=None,
+    kernel:Optional[str] = None,
     **kwargs,
     ) -> tuple[dict[int, dict[str, float]], pd.DataFrame]:
+
 
     """
     here you should change the names
     """
-    unrolled_features:list = unroll_features(features,single_features=single_features)
-    X, y, data_shape = get_data(
-                                raw_dataset=dataset,
-                                feats=unrolled_features,
-                                target=target,
-                                )
+
+
+
+    X, y, unrolled_feats, X_y_shape = filter_dataset(
+                                        raw_dataset=dataset,
+                                        structure_feats=structural_features,
+                                        scalar_feats=numerical_feats,
+                                        target_feats=target_features,
+                                        cutoff=cutoff,
+                                        dropna = True,
+                                        unroll=unroll,
+                                        )
 
     # Pipline workflow here and preprocessor
-    preprocessor: Pipeline = get_scale(feats=unrolled_features,
-                                       scaler_type=transform_type)
+    preprocessor: Pipeline = preprocessing_workflow(imputer=imputer,
+                                                    feat_to_impute=features_impute,
+                                                    representation = representation,
+                                                    numerical_feat=numerical_feats,
+                                                    structural_feat = unrolled_feats,
+                                                    special_column=special_impute,
+                                                    scaler=transform_type)
     
+
+
     preprocessor.set_output(transform="pandas")
     
-    score,predication,feature_importance = run(X,
-                                                y,
-                                                preprocessor=preprocessor,
-                                                regressor_type=regressor_type,
-                                                transform_type=transform_type,
-                                                hyperparameter_optimization=hyperparameter_optimization,
-                                                generalizability=generalizability,
-                                                feat_importance=feat_importance,
-                                                )
-    return score, predication, data_shape, feature_importance
+    score,predication= run(
+                            X,
+                            y,
+                            preprocessor=preprocessor,
+                            target_features=target_features,
+                            regressor_type=regressor_type,
+                            transform_type=transform_type,
+                            hyperparameter_optimization=hyperparameter_optimization,
+                            kernel=kernel,
+                            **kwargs,
+                            )
+    # print(X_y_shape)
+    combined_prediction_ground_truth = pd.concat([predication, y.reset_index(drop=True)], axis=1)
+
+    return score, combined_prediction_ground_truth, X_y_shape
 
 def run(
-    X,
-    y,
-    preprocessor: Union[ColumnTransformer, Pipeline],
-    regressor_type: str,
-    transform_type: str,
-    generalizability:bool=False,
-    hyperparameter_optimization: bool = True,
-    feat_importance:bool=False,
+    X, y, preprocessor: Union[ColumnTransformer, Pipeline], target_features:str, regressor_type: str,
+    transform_type: str, hyperparameter_optimization: bool = True,
+    kernel:Optional[str] = None,**kwargs,
     ) -> tuple[dict[int, dict[str, float]], pd.DataFrame]:
 
     seed_scores: dict[int, dict[str, float]] = {}
     seed_predictions: dict[int, np.ndarray] = {}
-    feature_importances:list = []
+    # if 'Rh (IW avg log)' in target_features:
+    #     y = np.log10(y)
+    
+
     for seed in SEEDS:
       cv_outer = KFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
-      y_transform = Pipeline(
-                steps=[("y scaler",transformers[transform_type]),
-                      ])
+      y_transform = get_target_transformer(transform_type,target_name=target_features)
+    #   inverse_transformers = get_inverse_target_transformer(target_features, transform_type)
 
       y_transform_regressor = TransformedTargetRegressor(
-                    regressor_factory[regressor_type],
-                    transformer=y_transform,
-                    )
-
+            regressor=regressor_factory[regressor_type](kernel=kernel) if regressor_type=="GPR"
+                      else regressor_factory[regressor_type],
+            transformer=y_transform,
+        )
       regressor :Pipeline= Pipeline(steps=[
                     ("preprocessor", preprocessor),
                     ("regressor", y_transform_regressor),
@@ -152,7 +182,7 @@ def run(
       # set_output on dataframe
       regressor.set_output(transform="pandas")
       if hyperparameter_optimization:
-            regressor, regressor_params = _optimize_hyperparams(
+            best_estimator, regressor_params = _optimize_hyperparams(
                 X,
                 y,
                 cv_outer=cv_outer,
@@ -161,46 +191,34 @@ def run(
                 regressor=regressor,
             )
             scores, predictions = cross_validate_regressor(
-                regressor, X, y, cv_outer
+                best_estimator, X, y, cv_outer
             )
             scores["best_params"] = regressor_params
-              
 
 
       else:
             scores, predictions = cross_validate_regressor(regressor, X, y, cv_outer)
-           
-                
-      if generalizability:
-          train_sizes, train_scores, test_scores = get_incremental_split(regressor,
-                                                                                X,
-                                                                                y,
-                                                                                cv_outer,
-                                                                                steps=0.2,
-                                                                                random_state=seed)
-          scores = get_generalizability_score(X,
-                                                scores,
-                                                train_sizes,
-                                                train_scores,
-                                                test_scores,
-                                                )
-          
-      if feat_importance:    
-            importance = get_feature_importance(X, scores, seed)
-            feature_importances.append(importance)
-
-      scores.pop('estimator', None)
+            
       seed_scores[seed] = scores
+    #   if 'Rh (IW avg log)' in target_features:
+    #         seed_predictions[seed] = np.power(10, predictions).flatten()
+    #   else:
       seed_predictions[seed] = predictions.flatten()
-      # saving generalizability scores
+
 
     seed_predictions: pd.DataFrame = pd.DataFrame.from_dict(
                       seed_predictions, orient="columns")
-    if feat_importance:
-        seed_importance = pd.concat(feature_importances, axis=0, ignore_index=True)
+
+    return seed_scores, seed_predictions
+
+
+def _pd_to_np(data):
+    if isinstance(data, pd.DataFrame):
+        return data.values
+    elif isinstance(data, np.ndarray):
+        return data
     else:
-        seed_importance =None
-    return seed_scores, seed_predictions,seed_importance
+        raise ValueError("Data must be either a pandas DataFrame or a numpy array.")
 
 
 def _optimize_hyperparams(
@@ -233,6 +251,7 @@ def _optimize_hyperparams(
         )
         bayes.fit(X_train, y_train)
 
+        print(f"\n\nBest parameters: {bayes.best_params_}\n\n")
         estimators.append(bayes)
 
     # Extract the best estimator from hyperparameter optimization
@@ -260,5 +279,17 @@ def split_for_training(
         raise ValueError("Data must be either a pandas DataFrame, Series, or a numpy array.")
     return split_data
 
+
+
+def get_target_transformer(transformer,target_name) -> Pipeline:
+
+        return Pipeline(steps=[
+            ("log transform", FunctionTransformer(np.log10, inverse_func=lambda x: 10**x,
+                                                  check_inverse=True, validate=False)),  # log10(x)
+            ("y scaler", transforms[transformer])  # StandardScaler to standardize the log-transformed target
+            ])
+
+
+    
 
 
