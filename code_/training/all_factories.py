@@ -16,7 +16,7 @@ from typing import Callable, Optional, Union, Dict
 
 radius_to_bits: dict[int, int] = {3: 512, 4: 1024, 5: 2048, 6: 4096}
 
-transformers: dict[str, Callable] = {
+transforms: dict[str, Callable] = {
     None:                None,
     "Standard":          StandardScaler(),
     "Robust Scaler":      RobustScaler(),

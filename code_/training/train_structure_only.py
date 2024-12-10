@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 from training_utils import train_regressor
-from all_factories import radius_to_bits,cutoffs
+from all_factories import radius_to_bits
 import sys
 # import numpy as np
 from typing import Callable, Optional, Union, Dict, Tuple
@@ -15,11 +15,10 @@ HERE: Path = Path(__file__).resolve().parent
 DATASETS: Path = HERE.parent.parent / "datasets"
 RESULTS = Path = HERE.parent.parent / "results"
 
-training_df_dir: Path = DATASETS/ "training_dataset"/ "dataset_wo_block_cp_(fp-hsp)_added_additive_dropped_polyHSP_dropped.pkl"
+training_df_dir: Path = DATASETS/ "training"/ "training_dataset.pkl"
 w_data = pd.read_pickle(training_df_dir)
 
 TEST=False
-
 
 
 def main_ECFP_only(

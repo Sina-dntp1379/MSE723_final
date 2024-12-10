@@ -1,8 +1,5 @@
 from typing import Callable, Optional, Union, Dict, Tuple
-from sklearn.compose import ColumnTransformer
 
-from sklearn.pipeline import Pipeline
-from all_factories import transformers
 import pandas as pd
 import numpy as np
 from unrolling_utils import unrolling_factory
@@ -24,33 +21,6 @@ def sanitize_dataset(training_feats, traget_faet):
     traget_faet: pd.DataFrame = traget_faet.dropna()
     training_feats: pd.DataFrame =training_feats.loc[traget_faet.index]
     return training_feats, traget_faet
-
-
-
-# def get_data(raw_dataset:pd.DataFrame,
-#               feats:list,
-#               target:str):
-
-#     training_features:pd.DataFrame = raw_dataset[feats]
-#     target:pd.DataFrame = raw_dataset[target]
-#     training_features, target = sanitize_dataset(training_features,target)
-#     training_test_shape: dict ={
-#                                 "targets_shape": target.shape,
-#                                 "training_features_shape": training_features.shape
-#                                 }
-
-#     return training_features, target, training_test_shape
-
-
-def get_scale(feats:list,
-               scaler_type:str)-> Pipeline:
-    transformer = [("structural_scaling", transformers[scaler_type], feats)]
-    scaling = [("scaling features",
-              ColumnTransformer(transformers=[*transformer], remainder="passthrough", verbose_feature_names_out=False)
-              )]
-    
-    return Pipeline(scaling)
-
 
 
 def sanitize_dataset(
