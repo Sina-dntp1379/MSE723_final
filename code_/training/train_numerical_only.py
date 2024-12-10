@@ -15,7 +15,7 @@ RESULTS = Path = HERE.parent.parent / "results"
 training_df_dir: Path = DATASETS/ "training"/ "training_dataset.pkl"
 w_data = pd.read_pickle(training_df_dir)
 
-TEST = True
+TEST = False
 
 def main_numerical_only(
     dataset: pd.DataFrame,
@@ -58,9 +58,9 @@ def main_numerical_only(
     # transform_type= "Standard"
     # target_features= ['Lp (nm)']
     
-feat_list:list[str] = ["polymer size"
-                           ]
-models = "RF"
+# feat_list:list[str] = ["polymer size"
+#                            ]
+# models = "RF"
 main_numerical_only(
                 dataset=w_data,
                 numerical_feats=feat_list,
@@ -70,99 +70,39 @@ main_numerical_only(
 
 
 
-# def parse_arguments():
-#     parser = ArgumentParser(description="Process some data for numerical-only regression.")
-    
-#     # Argument for regressor_type
-#     parser.add_argument(
-#         '--target_features',
-#         choices=['Lp (nm)', 'Rg1 (nm)', 'Rh (IW avg log)'],  
-#         required=True,
-#         help="Specify a single target for the analysis."
-#     )
-    
-#     parser.add_argument(
-#         '--regressor_type', 
-#         type=str, 
-#         choices=['RF', 'DT', 'MLR', 'SVR', 'XGBR','KNN', 'GPR', 'NGB'], 
-#         required=True, 
-#         help="Regressor type required"
-#     )
-
-#     parser.add_argument(
-#         '--numerical_feats',
-#         type=str,
-#         choices=['Mn (g/mol)', 'Mw (g/mol)', 'PDI', 'Temperature SANS/SLS/DLS/SEC (K)',
-#                   'Concentration (mg/ml)','solvent dP',	'polymer dP',	'solvent dD',	'polymer dD',	'solvent dH',	'polymer dH', 'Ra',
-#                   "abs(solvent dD - polymer dD)", "abs(solvent dP - polymer dP)", "abs(solvent dH - polymer dH)"],
-
-#         nargs='+',  # Allows multiple choices
-#         required=True,
-#         help="Numerical features: choose"
-#     )
-    
-#     parser.add_argument(
-#         '--columns_to_impute',
-#         type=str,
-#         choices=['Mn (g/mol)', 'Mw (g/mol)', 'PDI', 'Temperature SANS/SLS/DLS/SEC (K)',
-#                   'Concentration (mg/ml)','solvent dP',	'polymer dP',	'solvent dD',	'polymer dD',	'solvent dH',	'polymer dH', 'Ra'],
-
-#         nargs='*',  # This allows 0 or more values
-#         default=None,  
-#         help="imputation features: choose"
-#     )
-
-#     parser.add_argument(
-#         '--imputer',
-#         choices=['mean', 'median', 'most_frequent',"distance KNN", None],  
-#         nargs='?',  # This allows the argument to be optional
-#         default=None,  
-#         help="Specify the imputation strategy or leave it as None."
-#     )
-
-#     parser.add_argument(
-#         '--special_impute',
-#         choices=['Mw (g/mol)', None],  
-#         nargs='?',  # This allows the argument to be optional
-#         default=None,  # Set the default value to None
-#         help="Specify the imputation strategy or leave it as None."
-#     )
-
-#     parser.add_argument(
-#         "--transform_type", 
-#         type=str, 
-#         choices=["Standard", "Robust Scaler"], 
-#         default= "Standard", 
-#         help="transform type required"
-#     )
-
-#     parser.add_argument(
-#         "--kernel", 
-#         type=str,
-#         default=None,
-#         help='kernel for GP is optinal'
-#     )
+def parse_arguments():
+    parser = ArgumentParser(description="Process some data for numerical-only regression.")
     
 
-# if __name__ == "__main__":
-#     args = parse_arguments()
     
-#     print(args.regressor_type)
-#     print(type(args.regressor_type))
+    parser.add_argument(
+        '--regressor_type', 
+        type=str, 
+        choices=['RF', 'DT', 'ElasticNet', 'XGBR'], 
+        required=True, 
+        help="Regressor type required"
+    )
 
-#     main_numerical_only(
-#         dataset=w_data,
-#         regressor_type=args.regressor_type,
-#         kernel=args.kernel,
-#         target_features=[args.target_features],  # Already a list from `choices`, no need to wrap
-#         transform_type=args.transform_type,
-#         hyperparameter_optimization=True,
-#         columns_to_impute=args.columns_to_impute,  # Already a list
-#         special_impute=args.special_impute,
-#         numerical_feats=args.numerical_feats,  # Already a list
-#         imputer=args.imputer,
-#         cutoff=None,  # Optional cutoff value
-#     )
+    parser.add_argument(
+        '--numerical_feats',
+        type=str,
+        nargs='+',  # Allows multiple choices
+        required=True,
+        help="Numerical features: choose"
+    )
+    
+    return parser
+
+
+
+if __name__ == "__main__":
+    args = parse_arguments()
+
+    main_numerical_only(
+        dataset=w_data,
+        regressor_type=args.regressor_type,
+        numerical_feats=args.numerical_feats
+    )
 
     # main_numerical_only(
     #     dataset=w_data,

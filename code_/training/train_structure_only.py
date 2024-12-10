@@ -28,6 +28,8 @@ def main_ECFP_only(
     transform_type: str,
     radius: int,
     generalizability:bool,
+    hyperparameter_optimization:bool,
+
 ) -> None:
     representation: str = "ECFP"
     n_bits = radius_to_bits[radius]
@@ -48,7 +50,7 @@ def main_ECFP_only(
                                         target_features=target_features,
                                         regressor_type=regressor_type,
                                         transform_type=transform_type,
-                                        hyperparameter_optimization=True,
+                                        hyperparameter_optimization=hyperparameter_optimization,
                                         feat_importance=None,
                                         generalizability=generalizability,
                                         Test=TEST
@@ -139,7 +141,8 @@ def perform_model_mordred(regressor_type:str):
 
 # perform_model_ecfp('GPR',6,"count",'Rg1 (nm)', 'Monomer',kernel='tanimoto')
 # perform_model_maccs()
-perform_model_mordred('RF')
+# perform_model_mordred('RF')
+perform_model_ecfp('RF')
 
 # def main():
 #     parser = ArgumentParser(description='Run models with specific parameters')
