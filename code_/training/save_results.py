@@ -58,7 +58,7 @@ def _save(scores: Optional[Dict[int, Dict[str, float]]],
 
     num_feats = "-".join(feature_abbrev.get(key,key) for key in numerical_feats) if numerical_feats else None
     fname_root = f"({num_feats})_{fname_root}" if num_feats else fname_root
-    fname_root = f"({representation})_({fname_root})" if representation else fname_root
+    fname_root = f"({representation})_{fname_root}" if representation else fname_root
     
     # fname_root = f"{fname_root}_{regressor_type}_{transform_type}"
     fname_root = f"{fname_root}_generalizability" if generalizability else fname_root

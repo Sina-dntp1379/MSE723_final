@@ -15,16 +15,15 @@ import seaborn as sns
 HERE: Path = Path(__file__).resolve().parent
 RESULTS: Path = HERE.parent/ "results"
 
-target_list = ["_log(J)at abs(.5) V"]
+target_list = ["target_hole mobility"]
 scores_list: list = {"r2", "mae", "rmse"}
-var_titles: dict[str, str] = {"stdev": "Standard Deviation", "stderr": "Standard Error"}
+var_titles: dict[str, str] = {"stdev": "Standard Deviation"}
 
 
 def get_results_from_file(
     file_path: Path,
     score: str,
     var: str,
-    # impute: bool = False,
 ) -> tuple[float, float]:
     """
     Args:
@@ -43,8 +42,8 @@ def get_results_from_file(
     else:
         # for just scaler features
 
-        model:str = file_path.parent.name
-        features:str = file_path.name.split(")")[0].replace("(", "")
+        model:str = file_path.name.split("_")[1]
+        features:str = file_path.name.split("_")[0]
         print(model)
         print(features)
         
@@ -66,8 +65,8 @@ def get_results_from_file(
 
 
 def get_result_dataframe(target_dir: Path,
-                        score: str,
-                        var: str,
+                            score: str,
+                            var: str,
 ) -> tuple[pd.DataFrame,pd.DataFrame]:
     
     avg_scores: pd.DataFrame = pd.DataFrame()
@@ -243,7 +242,7 @@ if __name__ == '__main__':
     # print(RESULTS)
     for target_folder in target_list:
         for i in scores_list:
-            draw_heatmap_results(target_dir=RESULTS/target_folder,
+            draw_heatmap_results(target_dir=RESULTS/target_folder/'scaler',
                                 target=target_folder,
                                 score=i,
                                 var='stdev')

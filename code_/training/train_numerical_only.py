@@ -51,13 +51,6 @@ def main_numerical_only(
                 )
 
 
-    # columns_to_impute: list[str] = ["PDI","Temperature SANS/SLS/DLS/SEC (K)","Concentration (mg/ml)"]
-    # special_column: str = "Mw (g/mol)"
-    # numerical_feats: list[str] = ["Mn (g/mol)", "Mw (g/mol)", "PDI", "Temperature SANS/SLS/DLS/SEC (K)","Concentration (mg/ml)"]
-    # imputer = "mean"
-    # transform_type= "Standard"
-    # target_features= ['Lp (nm)']
-    
 # feat_list:list[str] = ["polymer size"
 #                            ]
 # models = "RF"
@@ -69,6 +62,7 @@ def main_numerical_only(
 # )
 
 
+# passing to HPC Hazel
 
 def parse_arguments():
     parser = ArgumentParser(description="Process some data for numerical-only regression.")
@@ -103,24 +97,6 @@ if __name__ == "__main__":
         numerical_feats=[args.numerical_feats],
     )
 
-    # main_numerical_only(
-    #     dataset=w_data,
-    #     regressor_type="GPR",
-    #     kernel= "matern",
-    #     target_features=['Rh (IW avg log)'],  # Can adjust based on actual usage
-    #     transform_type="Standard",
-    #     hyperparameter_optimization=True,
-    #     columns_to_impute=None,
-    #     special_impute=None,
-    #     numerical_feats=['polymer dH'],
-    #     imputer=None,
-    #     cutoff=None)
-
-    # columns_to_impute: list[str] = ["PDI","Temperature SANS/SLS/DLS/SEC (K)","Concentration (mg/ml)"]
-    # special_column: str = "Mw (g/mol)"
-    # numerical_feats: list[str] = ["Mn (g/mol)", "Mw (g/mol)", "PDI", "Temperature SANS/SLS/DLS/SEC (K)","Concentration (mg/ml)"]
-
-# "intensity weighted average over log(Rh (nm))"
 
 
 
