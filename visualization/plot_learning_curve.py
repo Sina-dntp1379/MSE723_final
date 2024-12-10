@@ -12,7 +12,7 @@ import seaborn as sns
 HERE: Path = Path(__file__).resolve().parent
 RESULTS: Path = HERE.parent/ "results"
 
-target_list = ["_log(J)at abs(.5) V"]
+target_list = ["target_hole mobility"]
 
 
 
@@ -50,8 +50,8 @@ def get_learning_data(
         learning_df = None
     else:
         # for just scaler features
-        model:str = file_path.parent.name
-        features:str = file_path.name.split(")")[0].replace("(", "")
+        model:str = file_path.name.split("_")[1]
+        features:str = file_path.name.split("_")[0]
 
        
         with open(file_path, "r") as f:
@@ -71,17 +71,17 @@ def get_learning_data(
     return features, model, learning_df
 
 
-def _save_path(features,
-                model,
-                root_dir,
-                ):
+# def _save_path(features,
+#                 model,
+#                 root_dir,
+#                 ):
     
-    saving_folder = root_dir/'learning_curves'/model
-    os.makedirs(saving_folder, exist_ok=True)
+#     saving_folder = root_dir/'learning_curves'/model
+#     os.makedirs(saving_folder, exist_ok=True)
     
-    fname = f"{features}"
-    saving_path = saving_folder/ f"{fname}.png"
-    return saving_path
+#     fname = f"{features}"
+#     saving_path = saving_folder/ f"{fname}.png"
+#     return saving_path
 
 def _create_learning_curve(
     root_dir: Path,
@@ -139,13 +139,19 @@ def _create_learning_curve(
     plt.legend(fontsize=16)
 
     # make folder and save the files
-    saving_file_path =_save_path(features=features,
-                                       model=model, 
-                                       root_dir=root_dir,
-                                       )
-
+    # saving_file_path =_save_path(features=features,
+    #                                    model=model, 
+    #                                    root_dir=root_dir,
+    #                                    )
+    
+    
+    saving_folder = root_dir/'learning_curves'
+    os.makedirs(saving_folder, exist_ok=True)
+    
+    fname = f"{features}({model})"
+    saving_path = saving_folder/ f"{fname}.png"
     plt.tight_layout()
-    plt.savefig(saving_file_path, dpi=600)
+    plt.savefig(saving_path, dpi=600)
 
     # plt.show()
     plt.close()
@@ -159,29 +165,24 @@ def save_learning_curve(target_dir: Path,
     
 
     pattern: str = "*generalizability_scores.json"
-    for model_file in os.listdir(target_dir):
-        if "test" not in model_file:
+    # for model_file in os.listdir(target_dir):
 
-            score_files = [] 
-            model_dir = os.path.join(target_dir, model_file)
-            score_files: list[Path] = list(Path(model_dir).rglob(pattern))
-            
-            for file_path in score_files:
-                # for structural and mix of structural-scaler
-        
-                    feats, model, learning_score_data = get_learning_data(file_path=file_path)  
-                    _create_learning_curve(target_dir,
-                                        feats,
-                                        model,
-                                        learning_score_data,
-                                        figsize=(12, 8),
-                                        fig_title =f"Learning Curve of {model} on {feats}"
-                                        )
+    score_files: list[Path] = list(Path(target_dir).rglob(pattern))
+    
+    for file_path in score_files:
+        # for structural and mix of structural-scaler
 
-
+            feats, model, learning_score_data = get_learning_data(file_path=file_path)  
+            _create_learning_curve(target_dir,
+                                feats,
+                                model,
+                                learning_score_data,
+                                figsize=(12, 8),
+                                fig_title =f"Learning Curve of {model} on {feats}"
+                                )
 
 
 
 if __name__ == '__main__':
     for target_folder in target_list:
-        save_learning_curve(target_dir=RESULTS/target_folder)
+        save_learning_curve(target_dir=RESULTS/target_folder/'scaler')

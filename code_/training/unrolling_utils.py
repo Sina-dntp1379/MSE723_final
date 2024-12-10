@@ -62,9 +62,9 @@ unrolling_feature_factory: dict[str, list[str]] = {
                                                                                 'abs(solvent dH - polymer dH)'],
 
                                                 "device parameters":    ['dielectric_thickness','channel_length', 'channel_width',
-                                                                          'deposition_type encoded', 'electrode_configuration encoded',],
+                                                                          'deposition_type encoded', 'electrode_configuration encoded','postprocess.annealing.temperature'],
                                                 
-                                                "environmental parameters":     ['postprocess.annealing.temperature', 'params.environment encoded', 'ofet.environment encoded'],
+                                                "environmental parameters":     ['params.environment encoded', 'ofet.environment encoded'],
                                                  }
 
 def unroll_features(rolled_features:list[str])-> list:

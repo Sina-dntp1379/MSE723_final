@@ -73,21 +73,21 @@ def get_result_dataframe(target_dir: Path,
     std_scores: pd.DataFrame = pd.DataFrame()
     annotations: pd.DataFrame = pd.DataFrame()
     pattern: str = "*_scores.json"
-    for model_file in os.listdir(target_dir):
-        if "test" not in model_file:
+    # for model_file in os.listdir(target_dir):
+        # if "test" not in model_file:
 
-            model_path:str = os.path.join(target_dir, model_file)
-            score_files: list[Path] = list(Path(model_path).rglob(pattern))
+            # model_path:str = os.path.join(target_dir, model_file)
+    score_files: list[Path] = list(Path(target_dir).rglob(pattern))
 
-            for file_path in score_files:
-                features, model, av , std = get_results_from_file(file_path=file_path, score=score, var=var) 
-                if features not in avg_scores.columns:
+    for file_path in score_files:
+        features, model, av , std = get_results_from_file(file_path=file_path, score=score, var=var) 
+        if features not in avg_scores.columns:
 
-                    avg_scores.loc[features,model] = av
-                    std_scores.loc[features,model] = std
-                else:
-                    avg_scores.at[features,model] = av
-                    std_scores.at[features,model] = std
+            avg_scores.loc[features,model] = av
+            std_scores.loc[features,model] = std
+        else:
+            avg_scores.at[features,model] = av
+            std_scores.at[features,model] = std
     
 
     for x, y in product(avg_scores.columns.to_list(), avg_scores.index.to_list()):
@@ -241,10 +241,10 @@ if __name__ == '__main__':
 
     # print(RESULTS)
     for target_folder in target_list:
-        for i in scores_list:
+        for score in scores_list:
             draw_heatmap_results(target_dir=RESULTS/target_folder/'scaler',
                                 target=target_folder,
-                                score=i,
+                                score=score,
                                 var='stdev')
             
 
