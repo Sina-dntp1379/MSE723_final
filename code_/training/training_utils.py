@@ -4,7 +4,7 @@ from typing import Callable, Optional, Union, Dict, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
-from sklearn.model_selection import KFold, str
+from sklearn.model_selection import KFold, StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 from skopt import BayesSearchCV
 from sklearn.preprocessing import FunctionTransformer
@@ -47,17 +47,14 @@ def train_regressor(
     dataset: pd.DataFrame,
     features_impute: Optional[list[str]],
     special_impute: Optional[str],
-    representation: Optional[str],
     structural_features: Optional[list[str]],
     numerical_feats: Optional[list[str]],
     unroll: Union[dict[str, str], list[dict[str, str]], None],
     regressor_type: str,
     target_features: str,
     transform_type: str,
+    generalizability:bool,
     hyperparameter_optimization: bool=True,
-    imputer: Optional[str] = None,
-    cutoff:Dict[str, Tuple[Optional[float], Optional[float]]]=None,
-    kernel: Optional[str] = None,
     Test:bool=False,
     ) -> None:
         """
@@ -65,23 +62,20 @@ def train_regressor(
         """
             #seed scores and seed prediction
         set_globals(Test)
-        scores, predictions, data_shape = _prepare_data(
-                                                    dataset=dataset,
-                                                    features_impute= features_impute,
-                                                    special_impute= special_impute,
-                                                    representation=representation,
-                                                    structural_features=structural_features,
-                                                    unroll=unroll,
-                                                    numerical_feats = numerical_feats,
-                                                    target_features=target_features,
-                                                    regressor_type=regressor_type,
-                                                    transform_type=transform_type,
-                                                    imputer=imputer,
-                                                    cutoff=cutoff,
-                                                    hyperparameter_optimization=hyperparameter_optimization,
-                                                    kernel=kernel
-                                                    )
-        scores = process_scores(scores)
+        scores, predictions, data_shape,feature_importance = _prepare_data(
+                                                            dataset=dataset,
+                                                            features_impute= features_impute,
+                                                            special_impute= special_impute,
+                                                            structural_features=structural_features,
+                                                            unroll=unroll,
+                                                            numerical_feats = numerical_feats,
+                                                            target_features=target_features,
+                                                            regressor_type=regressor_type,
+                                                            transform_type=transform_type,
+                                                            generalizability=generalizability,
+                                                            hyperparameter_optimization=hyperparameter_optimization,
+                                                            )
+        scores = process_results(scores, data_shape, generalizability)
   
         return scores, predictions, data_shape
         
@@ -92,17 +86,12 @@ def _prepare_data(
     dataset: pd.DataFrame,
     target_features: str,
     regressor_type: str,
-    features_impute: Optional[list[str]]=None,
-    special_impute: Optional[str]=None,
-    representation: Optional[str]=None,
+    generalizability:bool,
     structural_features: Optional[list[str]]=None,
     numerical_feats: Optional[list[str]]=None,
     unroll: Union[dict, list, None] = None,
     transform_type: str = "Standard",
     hyperparameter_optimization: bool = True,
-    imputer: Optional[str] = None,
-    cutoff: Dict[str, Tuple[Optional[float], Optional[float]]]=None,
-    kernel:Optional[str] = None,
     **kwargs,
     ) -> tuple[dict[int, dict[str, float]], pd.DataFrame]:
 
@@ -113,50 +102,51 @@ def _prepare_data(
 
 
 
-    X, y, unrolled_feats, X_y_shape = filter_dataset(
+    X, y, unrolled_feats, data_shape = filter_dataset(
                                         raw_dataset=dataset,
                                         structure_feats=structural_features,
                                         scalar_feats=numerical_feats,
                                         target_feats=target_features,
-                                        cutoff=cutoff,
                                         dropna = True,
                                         unroll=unroll,
                                         )
 
     # Pipline workflow here and preprocessor
-    preprocessor: Pipeline = preprocessing_workflow(imputer=imputer,
-                                                    feat_to_impute=features_impute,
-                                                    representation = representation,
-                                                    numerical_feat=numerical_feats,
-                                                    structural_feat = unrolled_feats,
-                                                    special_column=special_impute,
-                                                    scaler=transform_type)
+    # TODO: add scaler.
+    # preprocessor: Pipeline = preprocessing_workflow(imputer=imputer,
+    #                                                 feat_to_impute=features_impute,
+    #                                                 representation = representation,
+    #                                                 numerical_feat=numerical_feats,
+    #                                                 structural_feat = unrolled_feats,
+    #                                                 special_column=special_impute,
+    #                                                 scaler=transform_type)
     
 
 
     preprocessor.set_output(transform="pandas")
+    score, predication, feature_importance = run(
+                                                X,
+                                                y,
+                                                preprocessor=preprocessor,
+                                                regressor_type=regressor_type,
+                                                transform_type=transform_type,
+                                                hyperparameter_optimization=hyperparameter_optimization,
+                                                **kwargs,
+                                                )
     
-    score,predication= run(
-                            X,
-                            y,
-                            preprocessor=preprocessor,
-                            target_features=target_features,
-                            regressor_type=regressor_type,
-                            transform_type=transform_type,
-                            hyperparameter_optimization=hyperparameter_optimization,
-                            kernel=kernel,
-                            **kwargs,
-                            )
-    # print(X_y_shape)
     combined_prediction_ground_truth = pd.concat([predication, y.reset_index(drop=True)], axis=1)
-
-    return score, combined_prediction_ground_truth, X_y_shape
+    return score, combined_prediction_ground_truth, data_shape
 
 def run(
-    X, y, preprocessor: Union[ColumnTransformer, Pipeline], target_features:str, regressor_type: str,
-    transform_type: str, hyperparameter_optimization: bool = True,
-    kernel:Optional[str] = None,**kwargs,
-    ) -> tuple[dict[int, dict[str, float]], pd.DataFrame]:
+        X,
+        y,
+        preprocessor: Union[ColumnTransformer, Pipeline],
+        regressor_type: str,
+        transform_type: str, 
+        hyperparameter_optimization: bool = True,
+        generalizability:bool=False,
+        feat_importance:bool=False,
+        ) -> tuple[dict[int, dict[str, float]], pd.DataFrame]:
 
     seed_scores: dict[int, dict[str, float]] = {}
     seed_predictions: dict[int, np.ndarray] = {}
@@ -166,12 +156,10 @@ def run(
 
     for seed in SEEDS:
       cv_outer = KFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
-      y_transform = get_target_transformer(transform_type,target_name=target_features)
-    #   inverse_transformers = get_inverse_target_transformer(target_features, transform_type)
+      y_transform = get_target_transformer(transform_type)
 
       y_transform_regressor = TransformedTargetRegressor(
-            regressor=regressor_factory[regressor_type](kernel=kernel) if regressor_type=="GPR"
-                      else regressor_factory[regressor_type],
+            regressor=regressor_factory[regressor_type],
             transformer=y_transform,
         )
       regressor :Pipeline= Pipeline(steps=[
@@ -181,6 +169,7 @@ def run(
 
       # set_output on dataframe
       regressor.set_output(transform="pandas")
+      #TODO: modify generalizability
       if hyperparameter_optimization:
             best_estimator, regressor_params = _optimize_hyperparams(
                 X,
@@ -198,41 +187,63 @@ def run(
 
       else:
             scores, predictions = cross_validate_regressor(regressor, X, y, cv_outer)
-            
-      seed_scores[seed] = scores
-    #   if 'Rh (IW avg log)' in target_features:
-    #         seed_predictions[seed] = np.power(10, predictions).flatten()
-    #   else:
-      seed_predictions[seed] = predictions.flatten()
 
+
+
+      if generalizability:
+          train_sizes, train_scores, test_scores = get_incremental_split(regressor,
+                                                                                X,
+                                                                                y,
+                                                                                cv_outer,
+                                                                                steps=0.2,
+                                                                                random_state=seed)
+          scores = get_generalizability_score(X,
+                                                scores,
+                                                train_sizes,
+                                                train_scores,
+                                                test_scores,
+                                                )
+          
+      if feat_importance:    
+            importance = get_feature_importance(X, scores, seed)
+            feature_importances.append(importance)
+
+      scores.pop('estimator', None)
+      seed_scores[seed] = scores
+      seed_predictions[seed] = predictions.flatten()
+      # saving generalizability scores
 
     seed_predictions: pd.DataFrame = pd.DataFrame.from_dict(
                       seed_predictions, orient="columns")
-
-    return seed_scores, seed_predictions
-
-
-def _pd_to_np(data):
-    if isinstance(data, pd.DataFrame):
-        return data.values
-    elif isinstance(data, np.ndarray):
-        return data
+    if feat_importance:
+        seed_importance = pd.concat(feature_importances, axis=0, ignore_index=True)
     else:
-        raise ValueError("Data must be either a pandas DataFrame or a numpy array.")
+        seed_importance =None
+    return seed_scores, seed_predictions,seed_importance
+            
+
+
+# def _pd_to_np(data):
+#     if isinstance(data, pd.DataFrame):
+#         return data.values
+#     elif isinstance(data, np.ndarray):
+#         return data
+#     else:
+#         raise ValueError("Data must be either a pandas DataFrame or a numpy array.")
 
 
 def _optimize_hyperparams(
-    X, y, cv_outer: KFold, seed: int, regressor_type: str, regressor: Pipeline) -> tuple:
+    X, y, groups:np.array, seed: int, regressor_type: str, regressor: Pipeline) -> tuple:
 
     # Splitting for outer cross-validation loop
     estimators: list[BayesSearchCV] = []
-    for train_index, _ in cv_outer.split(X, y):
+    cv_inner = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
+    for train_index, _ in cv_inner.split(X, y, groups):
 
         X_train = split_for_training(X, train_index)
         y_train = split_for_training(y, train_index)
         # print(X_train)
         # Splitting for inner hyperparameter optimization loop
-        cv_inner = KFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
         print("\n\n")
         print(
             "OPTIMIZING HYPERPARAMETERS FOR REGRESSOR", regressor_type, "\tSEED:", seed
@@ -281,7 +292,7 @@ def split_for_training(
 
 
 
-def get_target_transformer(transformer,target_name) -> Pipeline:
+def get_target_transformer(transformer) -> Pipeline:
 
         return Pipeline(steps=[
             ("log transform", FunctionTransformer(np.log10, inverse_func=lambda x: 10**x,
