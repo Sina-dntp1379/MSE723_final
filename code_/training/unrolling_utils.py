@@ -50,7 +50,29 @@ unrolling_factory: dict[str, Callable] = {
 
 
 
+unrolling_feature_factory: dict[str, list[str]] = {
+                                                "polymer size":     ['mn', 'dispersity'],
+                                                "single solvent descriptors":  ['concentration', 'solvent dP',
+                                                                        'polymer dP', 'solvent dD', 'polymer dD',
+                                                                        'solvent dH', 'polymer dH',
+                                                                        ],
+                                                "hsp descriptors": ["Ra"],
+                                                "pair solvent descriptors": ['abs(solvent dD - polymer dD)',
+                                                                              'abs(solvent dP - polymer dP)',
+                                                                                'abs(solvent dH - polymer dH)'],
 
+                                                "device parameters":    ['dielectric_thickness','channel_length', 'channel_width',
+                                                                          'deposition_type encoded', 'electrode_configuration encoded',],
+                                                
+                                                "environmental parameters":     ['postprocess.annealing.temperature', 'params.environment encoded', 'ofet.environment encoded'],
+                                                 }
+
+def unroll_features(rolled_features:list[str])-> list:
+    if rolled_features==None:
+        return None
+    else:
+        unrolled_features =   [feats for features in rolled_features for feats in unrolling_feature_factory[features]]
+        return unrolled_features
 
 
 

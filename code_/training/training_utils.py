@@ -4,7 +4,7 @@ from typing import Callable, Optional, Union, Dict, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
-from sklearn.model_selection import KFold, StratifiedGroupKFold
+from sklearn.model_selection import KFold, StratifiedGroupKFold, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from skopt import BayesSearchCV
 from sklearn.preprocessing import FunctionTransformer
@@ -12,6 +12,7 @@ from sklearn.preprocessing import FunctionTransformer
 
 from save_results import remove_unserializable_keys
 from filter_data import filter_dataset
+from unrolling_utils import unroll_features
 from all_factories import (
                             regressor_factory,
                             regressor_search_space,
@@ -33,9 +34,9 @@ HERE: Path = Path(__file__).resolve().parent
 def set_globals(Test: bool=False) -> None:
     global SEEDS, N_FOLDS, BO_ITER
     if not Test:
-        SEEDS = [6, 13, 42, 69, 420, 1234567890, 473129]
+        SEEDS = [13, 42, 69, 420, 473129]
         N_FOLDS = 5
-        BO_ITER = 42
+        BO_ITER = 20
     else:
         SEEDS = [42,13]
         N_FOLDS = 2
@@ -97,18 +98,19 @@ def _prepare_data(
     """
 
 
+    unrolled_features:list = unroll_features(numerical_feats)
 
     X, y, unrolled_feats, splitting_groups, data_shape = filter_dataset(
-                                                raw_dataset=dataset,
-                                                structure_feats=structural_features,
-                                                scalar_feats=numerical_feats,
-                                                target_feats=target_features,
-                                                dropna = True,
-                                                unroll=unroll,
-                                                )
+                                                        raw_dataset=dataset,
+                                                        structure_feats=structural_features,
+                                                        scalar_feats=unrolled_features,
+                                                        target_feats=target_features,
+                                                        dropna = True,
+                                                        unroll=unroll,
+                                                        )
 
     preprocessor: Pipeline = preprocessing_workflow(
-                                                    numerical_feat=numerical_feats,
+                                                    numerical_feat=unrolled_features,
                                                     structural_feat = unrolled_feats,
                                                     scaler=transform_type
                                                     )
@@ -167,7 +169,6 @@ def run(
             best_estimator, regressor_params = _optimize_hyperparams(
                 X,
                 y,
-                cv_outer=cv_outer,
                 seed=seed,
                 regressor_type=regressor_type,
                 regressor=regressor,
@@ -231,11 +232,12 @@ def _optimize_hyperparams(
 
     # Splitting for outer cross-validation loop
     estimators: list[BayesSearchCV] = []
-    cv_inner = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
-    for train_index, _ in cv_inner.split(X, y, groups):
+    cv_inner = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
+    for train_index, _ in cv_inner.split(X, groups):
 
         X_train = split_for_training(X, train_index)
         y_train = split_for_training(y, train_index)
+        cv_outer = KFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
         # print(X_train)
         # Splitting for inner hyperparameter optimization loop
         print("\n\n")
@@ -247,7 +249,7 @@ def _optimize_hyperparams(
             regressor,
             regressor_search_space[regressor_type],
             n_iter=BO_ITER,
-            cv=cv_inner,
+            cv=cv_outer,
             n_jobs=-1,
             random_state=seed,
             refit=True,

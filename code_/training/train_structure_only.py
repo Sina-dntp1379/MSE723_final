@@ -8,7 +8,7 @@ from typing import Callable, Optional, Union, Dict, Tuple
 sys.path.append("../cleaning")
 # from clean_dataset import open_json
 from argparse import ArgumentParser
-from save_results import save_result
+from save_results import save_results
 
 
 HERE: Path = Path(__file__).resolve().parent
@@ -21,26 +21,11 @@ w_data = pd.read_pickle(training_df_dir)
 TEST=False
 
 
-# def train_regressor(
-#     dataset: pd.DataFrame,
-#     structural_features: Optional[list[str]],
-#     numerical_feats: Optional[list[str]],
-#     unroll: Union[dict[str, str], list[dict[str, str]], None],
-#     regressor_type: str,
-#     target_features: str,
-#     transform_type: str,
-#     generalizability:bool,
-#     feat_importance:bool,
-#     hyperparameter_optimization: bool=True,
-#     Test:bool=False,
-#     ) -> None:
-
 def main_ECFP_only(
     dataset: pd.DataFrame,
     regressor_type: str,
     target_features: list[str],
     transform_type: str,
-    hyperparameter_optimization: bool,
     radius: int,
     generalizability:bool,
 ) -> None:
@@ -55,7 +40,7 @@ def main_ECFP_only(
         "n_bits": n_bits,
         "col_names": structural_features,
     }
-    scores, predictions, data_shapes = train_regressor(
+    scores, predictions,  feature_imp = train_regressor(
                                         dataset=dataset,
                                         structural_features=structural_features,
                                         unroll=unroll_single_feat,
@@ -63,17 +48,17 @@ def main_ECFP_only(
                                         target_features=target_features,
                                         regressor_type=regressor_type,
                                         transform_type=transform_type,
-                                        hyperparameter_optimization=hyperparameter_optimization,
+                                        hyperparameter_optimization=True,
                                         feat_importance=None,
                                         generalizability=generalizability,
                                         Test=TEST
-                                    )
-    save_result(scores,
+                                        )
+    save_results(scores,
             predictions=predictions,
-            df_shapes=data_shapes,
-            generalizability_score=None,
+            # importance_score=feature_imp,
+            generalizability=generalizability,
             representation= representation,
-            radius= radius,
+            # radius= radius,
             target_features=target_features,
             regressor_type=regressor_type,
             TEST=TEST,
@@ -86,8 +71,8 @@ def main_Mordred_only(
     regressor_type: str,
     target_features: list[str],
     transform_type: str,
-    hyperparameter_optimization: bool,
     generalizability:bool,
+    hyperparameter_optimization:bool,
 
 ) -> None:
     representation: str = "Mordred"
@@ -95,7 +80,7 @@ def main_Mordred_only(
     unroll_single_feat = {"representation": representation,
                           "col_names": structural_features}
 
-    scores, predictions, data_shapes  = train_regressor(
+    scores, predictions, feature_imp  = train_regressor(
                                     dataset=dataset,
                                     structural_features=structural_features,
                                     unroll=unroll_single_feat,
@@ -107,12 +92,12 @@ def main_Mordred_only(
                                     feat_importance=None,
                                     generalizability=generalizability,
                                     Test=TEST
-                                )
+                                    )
 
-    save_result(scores=scores,
+    save_results(scores=scores,
                 predictions=predictions,
-                df_shapes=data_shapes,
-                generalizability_score=None,
+                # importance_score=feature_imp,
+                generalizability=generalizability,
                 representation= representation,
                 target_features=target_features,
                 regressor_type=regressor_type,
@@ -124,11 +109,6 @@ def main_Mordred_only(
 
 
 
-
-# for radius in radii:
-# for vector in vectors:
-# radii = [3, 4, 5, 6]
-# vectors = ['count', 'binary']
 def perform_model_ecfp(regressor_type:str,
                         ):
                 
@@ -138,6 +118,8 @@ def perform_model_ecfp(regressor_type:str,
                                 target_features= ["ofet.hole_mobility"],
                                 hyperparameter_optimization= True,
                                 radius = 6,
+                                generalizability=True,
+                                transform_type="Standard"
                                 )
 
 
@@ -148,6 +130,8 @@ def perform_model_mordred(regressor_type:str):
                                 regressor_type= regressor_type,
                                 target_features= ["ofet.hole_mobility"],
                                 hyperparameter_optimization= True,
+                                generalizability=True,
+                                transform_type="Standard"
                                 )
 
 
@@ -155,7 +139,7 @@ def perform_model_mordred(regressor_type:str):
 
 # perform_model_ecfp('GPR',6,"count",'Rg1 (nm)', 'Monomer',kernel='tanimoto')
 # perform_model_maccs()
-# perform_model_mordred('RF')
+perform_model_mordred('RF')
 
 # def main():
 #     parser = ArgumentParser(description='Run models with specific parameters')
