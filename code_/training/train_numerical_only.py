@@ -61,12 +61,12 @@ def main_numerical_only(
 # feat_list:list[str] = ["polymer size"
 #                            ]
 # models = "RF"
-main_numerical_only(
-                dataset=w_data,
-                numerical_feats=feat_list,
-                regressor_type=models
+# main_numerical_only(
+#                 dataset=w_data,
+#                 numerical_feats=feat_list,
+#                 regressor_type=models
 
-)
+# )
 
 
 
@@ -78,7 +78,7 @@ def parse_arguments():
     parser.add_argument(
         '--regressor_type', 
         type=str, 
-        choices=['RF', 'DT', 'ElasticNet', 'XGBR'], 
+        choices=['RF', 'DT', 'ElasticNet', 'XGBR', 'NGB'], 
         required=True, 
         help="Regressor type required"
     )
