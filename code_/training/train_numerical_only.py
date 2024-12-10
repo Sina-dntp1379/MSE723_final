@@ -86,12 +86,11 @@ def parse_arguments():
     parser.add_argument(
         '--numerical_feats',
         type=str,
-        nargs='+',  # Allows multiple choices
         required=True,
         help="Numerical features: choose"
     )
     
-    return parser
+    return parser.parse_args()
 
 
 
