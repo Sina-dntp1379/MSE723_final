@@ -100,7 +100,7 @@ if __name__ == "__main__":
     main_numerical_only(
         dataset=w_data,
         regressor_type=args.regressor_type,
-        numerical_feats=args.numerical_feats
+        numerical_feats=[args.numerical_feats],
     )
 
     # main_numerical_only(
