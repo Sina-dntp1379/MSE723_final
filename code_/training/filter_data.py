@@ -4,8 +4,8 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from all_factories import transformers
 import pandas as pd
-
-
+import numpy as np
+from unrolling_utils import unrolling_factory
 
 
 def sanitize_dataset(training_feats, traget_faet):
@@ -81,7 +81,6 @@ def filter_dataset(
     structure_feats: Optional[list[str]], # can be None
     scalar_feats: Optional[list[str]], # like conc, temp
     target_feats: list[str], # lp
-    cutoff: Dict[str, Tuple[Optional[float], Optional[float]]],
     dropna: bool = True,
     unroll: Union[dict, list, None] = None,
     **kwargs,
@@ -107,32 +106,13 @@ def filter_dataset(
     ]
 
     dataset: pd.DataFrame = raw_dataset[all_feats]
-    if cutoff:
-        dataset = apply_cutoff(dataset,cutoff)
 
     if unroll:
         if isinstance(unroll, dict):
             structure_features: pd.DataFrame = unrolling_factory[
                 unroll["representation"]](dataset[structure_feats], **unroll)
-        elif isinstance(unroll, list):
-            multiple_unrolled_structure_feats: list[pd.DataFrame] = []
-            for unroll_dict in unroll:
-                single_structure_feat: pd.DataFrame = filter_dataset(
-                    dataset,
-                    # structure_feats=unroll_dict["columns"],
-                    structure_feats=unroll_dict["col_names"],
-                    scalar_feats=[],
-                    target_feats=[],
-                    # dropna=dropna,
-                    dropna=False,
-                    unroll=unroll_dict,
-                )[0]
-                multiple_unrolled_structure_feats.append(single_structure_feat)
-            structure_features: pd.DataFrame = pd.concat(
-                multiple_unrolled_structure_feats, axis=1
-            )
         else:
-            raise ValueError(f"Unroll must be a dict or list, not {type(unroll)}")
+            raise ValueError(f"Unroll must be a dict, not {type(unroll)}")
     elif structure_feats:
         structure_features: pd.DataFrame = dataset[structure_feats]
     else:
@@ -159,4 +139,9 @@ def filter_dataset(
                                 "targets_shape": targets.shape,
                                 "training_features_shape": training_features.shape
                                 }
-    return training_features, targets, new_struct_feats, training_test_shape
+    split_groups = get_group(raw_dataset)
+    return training_features, targets, new_struct_feats, split_groups, training_test_shape
+
+
+def get_group(df)-> np.array:
+    return df['common_name'].to_numpy()

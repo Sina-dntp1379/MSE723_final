@@ -10,14 +10,14 @@ from skopt import BayesSearchCV
 from sklearn.preprocessing import FunctionTransformer
 
 
-from save_results import remove_unserializable_keys, save_result
-from filter_data import filter_dataset, get_scale
+from save_results import remove_unserializable_keys
+from filter_data import filter_dataset
 from all_factories import (
                             regressor_factory,
                             regressor_search_space,
                             transforms)
 
-
+from get_scale import preprocessing_workflow
 
 from process_scoring import (process_results)
 from split import (
@@ -45,8 +45,6 @@ def set_globals(Test: bool=False) -> None:
 
 def train_regressor(
     dataset: pd.DataFrame,
-    features_impute: Optional[list[str]],
-    special_impute: Optional[str],
     structural_features: Optional[list[str]],
     numerical_feats: Optional[list[str]],
     unroll: Union[dict[str, str], list[dict[str, str]], None],
@@ -54,18 +52,14 @@ def train_regressor(
     target_features: str,
     transform_type: str,
     generalizability:bool,
+    feat_importance:bool,
     hyperparameter_optimization: bool=True,
     Test:bool=False,
     ) -> None:
-        """
-        you should change the name here for prepare
-        """
-            #seed scores and seed prediction
+
         set_globals(Test)
-        scores, predictions, data_shape,feature_importance = _prepare_data(
+        scores, predictions, data_shape, feature_importance = _prepare_data(
                                                             dataset=dataset,
-                                                            features_impute= features_impute,
-                                                            special_impute= special_impute,
                                                             structural_features=structural_features,
                                                             unroll=unroll,
                                                             numerical_feats = numerical_feats,
@@ -73,11 +67,12 @@ def train_regressor(
                                                             regressor_type=regressor_type,
                                                             transform_type=transform_type,
                                                             generalizability=generalizability,
+                                                            feat_importance=feat_importance,
                                                             hyperparameter_optimization=hyperparameter_optimization,
                                                             )
         scores = process_results(scores, data_shape, generalizability)
   
-        return scores, predictions, data_shape
+        return scores, predictions, feature_importance
         
 
 
@@ -87,6 +82,7 @@ def _prepare_data(
     target_features: str,
     regressor_type: str,
     generalizability:bool,
+    feat_importance:bool,
     structural_features: Optional[list[str]]=None,
     numerical_feats: Optional[list[str]]=None,
     unroll: Union[dict, list, None] = None,
@@ -102,24 +98,20 @@ def _prepare_data(
 
 
 
-    X, y, unrolled_feats, data_shape = filter_dataset(
-                                        raw_dataset=dataset,
-                                        structure_feats=structural_features,
-                                        scalar_feats=numerical_feats,
-                                        target_feats=target_features,
-                                        dropna = True,
-                                        unroll=unroll,
-                                        )
+    X, y, unrolled_feats, splitting_groups, data_shape = filter_dataset(
+                                                raw_dataset=dataset,
+                                                structure_feats=structural_features,
+                                                scalar_feats=numerical_feats,
+                                                target_feats=target_features,
+                                                dropna = True,
+                                                unroll=unroll,
+                                                )
 
-    # Pipline workflow here and preprocessor
-    # TODO: add scaler.
-    # preprocessor: Pipeline = preprocessing_workflow(imputer=imputer,
-    #                                                 feat_to_impute=features_impute,
-    #                                                 representation = representation,
-    #                                                 numerical_feat=numerical_feats,
-    #                                                 structural_feat = unrolled_feats,
-    #                                                 special_column=special_impute,
-    #                                                 scaler=transform_type)
+    preprocessor: Pipeline = preprocessing_workflow(
+                                                    numerical_feat=numerical_feats,
+                                                    structural_feat = unrolled_feats,
+                                                    scaler=transform_type
+                                                    )
     
 
 
@@ -131,11 +123,14 @@ def _prepare_data(
                                                 regressor_type=regressor_type,
                                                 transform_type=transform_type,
                                                 hyperparameter_optimization=hyperparameter_optimization,
+                                                groups = splitting_groups,
+                                                generalizability=generalizability,
+                                                feat_importance=feat_importance,
                                                 **kwargs,
                                                 )
     
     combined_prediction_ground_truth = pd.concat([predication, y.reset_index(drop=True)], axis=1)
-    return score, combined_prediction_ground_truth, data_shape
+    return score, combined_prediction_ground_truth, data_shape, feature_importance
 
 def run(
         X,
@@ -143,6 +138,7 @@ def run(
         preprocessor: Union[ColumnTransformer, Pipeline],
         regressor_type: str,
         transform_type: str, 
+        groups:np.array,
         hyperparameter_optimization: bool = True,
         generalizability:bool=False,
         feat_importance:bool=False,
@@ -150,9 +146,7 @@ def run(
 
     seed_scores: dict[int, dict[str, float]] = {}
     seed_predictions: dict[int, np.ndarray] = {}
-    # if 'Rh (IW avg log)' in target_features:
-    #     y = np.log10(y)
-    
+    feature_importances:list = []
 
     for seed in SEEDS:
       cv_outer = KFold(n_splits=N_FOLDS, shuffle=True, random_state=seed)
@@ -169,7 +163,6 @@ def run(
 
       # set_output on dataframe
       regressor.set_output(transform="pandas")
-      #TODO: modify generalizability
       if hyperparameter_optimization:
             best_estimator, regressor_params = _optimize_hyperparams(
                 X,
@@ -178,6 +171,7 @@ def run(
                 seed=seed,
                 regressor_type=regressor_type,
                 regressor=regressor,
+                groups=groups
             )
             scores, predictions = cross_validate_regressor(
                 best_estimator, X, y, cv_outer
@@ -198,11 +192,11 @@ def run(
                                                                                 steps=0.2,
                                                                                 random_state=seed)
           scores = get_generalizability_score(X,
-                                                scores,
-                                                train_sizes,
-                                                train_scores,
-                                                test_scores,
-                                                )
+                                            scores,
+                                            train_sizes,
+                                            train_scores,
+                                            test_scores,
+                                            )
           
       if feat_importance:    
             importance = get_feature_importance(X, scores, seed)
@@ -296,8 +290,8 @@ def get_target_transformer(transformer) -> Pipeline:
 
         return Pipeline(steps=[
             ("log transform", FunctionTransformer(np.log10, inverse_func=lambda x: 10**x,
-                                                  check_inverse=True, validate=False)),  # log10(x)
-            ("y scaler", transforms[transformer])  # StandardScaler to standardize the log-transformed target
+                                                  check_inverse=True, validate=False)),
+            ("y scaler", transforms[transformer])  
             ])
 
 
