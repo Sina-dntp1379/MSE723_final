@@ -2,8 +2,8 @@
 output_dir=/share/ddomlab/sdehgha2/working-space/main/informatics/MSE723_final/HpcOut
 
 # Correctly define models and numerical features
-models_to_run=("RF" "ElasticNet" "DT" "XGBR" "NGB")
-# numerical_feat_list=("selected features")
+models_to_run=("XGBR")
+numerical_feat_list=("polymer size", "single solvent descriptors","hsp descriptors","pair solvent descriptors","device parameters","environmental parameters")
 
         for model in "${models_to_run[@]}"; do
             # for feats in "${numerical_feat_list[@]}"; do
@@ -22,11 +22,12 @@ source ~/.bashrc
 conda activate /usr/local/usrapps/ddomlab/sdehgha2/pls-dataset-env
 
 python ../train_numerical_only.py --regressor_type "${model}" \
+                                  --numerical_feats "${feats}" \
 
 conda deactivate
 
 EOT
-    # done
+    done
 done
 
 
