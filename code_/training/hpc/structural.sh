@@ -1,5 +1,5 @@
 #!/bin/bash
-output_dir=/share/ddomlab/sdehgha2/working-space/main/P1_pls-dataset/pls-dataset-space/PLS-Dataset/results
+output_dir=/share/ddomlab/sdehgha2/working-space/main/informatics/MSE723_final/HpcOut
 # Define arrays for regressor types, targets, and models
 regressors=("RF" "DT" "XGBR" "NGB")
 models=("mordred" "ecfp")

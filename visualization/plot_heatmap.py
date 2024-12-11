@@ -242,9 +242,10 @@ if __name__ == '__main__':
     # print(RESULTS)
     for target_folder in target_list:
         for score in scores_list:
-            draw_heatmap_results(target_dir=RESULTS/target_folder/'scaler',
-                                target=target_folder,
-                                score=score,
-                                var='stdev')
+            for  type in ['scaler', 'structural']:
+                draw_heatmap_results(target_dir=RESULTS/target_folder/type,
+                                    target=target_folder,
+                                    score=score,
+                                    var='stdev')
             
 
