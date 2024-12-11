@@ -22,12 +22,11 @@ source ~/.bashrc
 conda activate /usr/local/usrapps/ddomlab/sdehgha2/pls-dataset-env
 
 python ../train_numerical_only.py --regressor_type "${model}" \
-                                #   --numerical_feats "${feats}" \
 
 conda deactivate
 
 EOT
-    done
+    # done
 done
 
 
