@@ -2,7 +2,7 @@
 output_dir=/share/ddomlab/sdehgha2/working-space/main/informatics/MSE723_final/HpcOut
 
 # Correctly define models and numerical features
-models_to_run=("RF" "ElasticNet" "DT" "XGBR" "NGB")
+models_to_run=("XGBR")
 # numerical_feat_list=("selected features")
 
         for model in "${models_to_run[@]}"; do

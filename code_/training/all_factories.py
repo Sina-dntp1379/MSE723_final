@@ -59,4 +59,12 @@ regressor_search_space = {
         "regressor__regressor__natural_gradient": [True],
         "regressor__regressor__verbose": [False],
     },
+    
+    "XGBR": {
+        "regressor__regressor__n_estimators": Integer(50, 2000, prior="log-uniform"),
+        "regressor__regressor__max_depth": Integer(10, 10000, prior="log-uniform"),
+        "regressor__regressor__n_jobs": [-2],
+        "regressor__regressor__learning_rate": Real(1e-3, 1e-1, prior="log-uniform"),
+    },
+
 }
