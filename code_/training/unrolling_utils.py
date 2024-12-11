@@ -65,6 +65,11 @@ unrolling_feature_factory: dict[str, list[str]] = {
                                                                           'deposition_type encoded', 'electrode_configuration encoded','postprocess.annealing.temperature'],
                                                 
                                                 "environmental parameters":     ['params.environment encoded', 'ofet.environment encoded'],
+                                                "selected features": ['solvent dP',
+                                                                        'polymer dP', 'solvent dD', 'polymer dD',
+                                                                        'solvent dH', 'polymer dH',
+                                                                        'params.environment encoded', 'ofet.environment encoded',
+                                                                        'deposition_type encoded','mn', 'dispersity']
                                                  }
 
 def unroll_features(rolled_features:list[str])-> list:
