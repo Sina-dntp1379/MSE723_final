@@ -222,7 +222,7 @@ def draw_heatmap_results(target_dir:Path,
                         var=var,
                         avg_scores=ave,
                         annotations=anot,
-                        figsize=(15,5),
+                        figsize=(18,12),
                         fig_title=f"Average {score_txt} Scores of ML algorithm for Predicting {target}",
                         x_title="Regression Models",
                         y_title="Feature Space",
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     # print(RESULTS)
     for target_folder in target_list:
         for score in scores_list:
-            for  type in ['structural']:
+            for  type in ['scaler']:
                 draw_heatmap_results(target_dir=RESULTS/target_folder/type,
                                     target=target_folder,
                                     score=score,
