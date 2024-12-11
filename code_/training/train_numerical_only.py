@@ -77,12 +77,12 @@ def parse_arguments():
         help="Regressor type required"
     )
 
-    parser.add_argument(
-        '--numerical_feats',
-        type=str,
-        required=True,
-        help="Numerical features: choose"
-    )
+    # parser.add_argument(
+    #     '--numerical_feats',
+    #     type=str,
+    #     required=True,
+    #     help="Numerical features: choose"
+    # )
     
     return parser.parse_args()
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     main_numerical_only(
         dataset=w_data,
         regressor_type=args.regressor_type,
-        numerical_feats=[args.numerical_feats],
+        numerical_feats=["polymer size", "single solvent descriptors","hsp descriptors","pair solvent descriptors","device parameters","environmental parameters"],
     )
 
 

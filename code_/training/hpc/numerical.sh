@@ -3,10 +3,10 @@ output_dir=/share/ddomlab/sdehgha2/working-space/main/informatics/MSE723_final/H
 
 # Correctly define models and numerical features
 models_to_run=("RF" "ElasticNet" "DT" "XGBR" "NGB")
-numerical_feat_list=("selected features")
+# numerical_feat_list=("selected features")
 
         for model in "${models_to_run[@]}"; do
-            for feats in "${numerical_feat_list[@]}"; do
+            # for feats in "${numerical_feat_list[@]}"; do
                 bsub <<EOT
 
 #BSUB -n 6
@@ -22,7 +22,7 @@ source ~/.bashrc
 conda activate /usr/local/usrapps/ddomlab/sdehgha2/pls-dataset-env
 
 python ../train_numerical_only.py --regressor_type "${model}" \
-                                  --numerical_feats "${feats}" \
+                                #   --numerical_feats "${feats}" \
 
 conda deactivate
 
