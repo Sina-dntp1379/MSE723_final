@@ -3,10 +3,10 @@ output_dir=/share/ddomlab/sdehgha2/working-space/main/informatics/MSE723_final/H
 
 # Correctly define models and numerical features
 models_to_run=("XGBR")
-numerical_feat_list=("polymer size", "single solvent descriptors","hsp descriptors","pair solvent descriptors","device parameters","environmental parameters")
+numerical_feat_list=("polymer size" "single solvent descriptors" "hsp descriptors" "pair solvent descriptors" "device parameters" "environmental parameters")
 
         for model in "${models_to_run[@]}"; do
-            # for feats in "${numerical_feat_list[@]}"; do
+            for feats in "${numerical_feat_list[@]}"; do
                 bsub <<EOT
 
 #BSUB -n 6
